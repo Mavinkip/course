@@ -1,0 +1,40 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ✅ Smooth fade animation */
+@layer utilities {
+  .animate-fade-in {
+    animation: fadeIn .4s ease-in-out;
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+}
+
+@layer components {
+
+  /* ✅ Card hover lift */
+  .card-hover {
+    @apply transition-all duration-300 hover:-translate-y-1 hover:shadow-xl;
+  }
+
+  /* ✅ Glass effect backgrounds */
+  .glass {
+    @apply bg-white/70 backdrop-blur-lg shadow-lg;
+  }
+
+  /* ✅ Gradient button */
+  .btn-gradient {
+    @apply bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold rounded-lg shadow-md hover:shadow-lg transition;
+  }
+}
