@@ -3,7 +3,7 @@ import {
     Calendar, Clock, Book, Settings, ChevronRight, BarChart3, Users, FileText,
     Home, Menu, Lock, Mail, Eye, EyeOff, GraduationCap, LogOut, UserCircle, Shield
 } from 'lucide-react'
-import { auth, db } from './firebase'
+import { auth, db, storage } from './firebase'
 import {
     signInWithEmailAndPassword,
     createUserWithEmailAndPassword,
@@ -14,6 +14,7 @@ import {
     doc, getDoc, setDoc, getDocs, collection, query, where, addDoc, updateDoc, deleteDoc,
     serverTimestamp, orderBy
 } from 'firebase/firestore'
+import { ref as storageRef, uploadBytesResumable, getDownloadURL } from 'firebase/storage'
 
 const buildDefaultProfile = (user, signupData = null) => {
     const email = user.email ?? ''
@@ -107,6 +108,9 @@ const SCMS = () => {
     const [showGradeModal, setShowGradeModal] = useState(false)
     const [showEnrollmentModal, setShowEnrollmentModal] = useState(false)
     const [newMaterial, setNewMaterial] = useState({ title: '', type: 'document', url: '', courseId: '' })
+    const [materialFile, setMaterialFile] = useState(null)
+    const [uploadingMaterial, setUploadingMaterial] = useState(false)
+    const [uploadProgress, setUploadProgress] = useState(0)
     const [newGrade, setNewGrade] = useState({ studentId: '', courseId: '', grade: '', assignment: '' })
     const [selectedCourseForAction, setSelectedCourseForAction] = useState(null)
     const [enrolledStudentsForGrade, setEnrolledStudentsForGrade] = useState([])
@@ -256,6 +260,13 @@ const SCMS = () => {
                         }))
                         const enrolledCourses = allCourses.filter(c => courseIds.includes(c.id))
                         setCoursesData(enrolledCourses)
+
+                        // Load materials for enrolled courses
+                        const materialsSnapshot = await getDocs(collection(db, 'materials'))
+                        const materialsData = materialsSnapshot.docs
+                            .map(doc => ({ id: doc.id, ...doc.data() }))
+                            .filter(m => courseIds.includes(m.courseId))
+                        setCourseMaterials(materialsData)
                     } else {
                         // Show all available courses for enrollment
                         const coursesSnapshot = await getDocs(collection(db, 'courses'))
@@ -264,6 +275,7 @@ const SCMS = () => {
                             ...doc.data()
                         }))
                         setCoursesData(coursesData)
+                        setCourseMaterials([])
                     }
 
                     // Load student's grades
@@ -1891,6 +1903,7 @@ const SCMS = () => {
                                 {coursesData.map(course => {
                                     const isEnrolled = enrollments.some(e => e.courseId === course.id && e.studentId === userProfile.uid)
                                     const courseGrades = grades.filter(g => g.courseId === course.id && g.studentId === userProfile.uid)
+                                    const courseMaterialsList = courseMaterials.filter(m => m.courseId === course.id)
                                     const avgGrade = courseGrades.length > 0
                                         ? (courseGrades.reduce((sum, g) => sum + parseFloat(g.grade || 0), 0) / courseGrades.length).toFixed(1)
                                         : 'N/A'
@@ -1930,6 +1943,29 @@ const SCMS = () => {
                                                     <span className="text-gray-800">{course.enrolled || 0}/{course.capacity || 30}</span>
                                                 </div>
                                             </div>
+                                            {isEnrolled && courseMaterialsList.length > 0 && (
+                                                <div className="mt-4 pt-4 border-t">
+                                                    <h4 className="font-semibold text-gray-700 mb-2">Course Materials</h4>
+                                                    <div className="space-y-2">
+                                                        {courseMaterialsList.map(material => (
+                                                            <div key={material.id} className="flex justify-between items-center bg-gray-50 p-2 rounded">
+                                                                <div>
+                                                                    <p className="text-sm font-medium">{material.title}</p>
+                                                                    <p className="text-xs text-gray-500 capitalize">{material.type}</p>
+                                                                </div>
+                                                                <a
+                                                                    href={material.url}
+                                                                    target="_blank"
+                                                                    rel="noreferrer"
+                                                                    className="px-3 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200"
+                                                                >
+                                                                    Open
+                                                                </a>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
                                             {!isEnrolled && (
                                                 <button
                                                     onClick={() => enrollInCourse(course.id)}
@@ -2173,6 +2209,58 @@ const SCMS = () => {
                                     placeholder="https://..."
                                 />
                             </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">Upload file from your computer</label>
+                                <input
+                                    type="file"
+                                    onChange={(e) => {
+                                        const file = e.target.files && e.target.files[0] ? e.target.files[0] : null
+                                        if (!file) return
+                                        setMaterialFile(file)
+                                        // Auto-start upload
+                                        try {
+                                            setUploadingMaterial(true)
+                                            setUploadProgress(0)
+                                            const courseFolder = (selectedCourseForAction?.id || 'general')
+                                            const path = `materials/${courseFolder}/${Date.now()}_${file.name}`
+                                            const ref = storageRef(storage, path)
+                                            const task = uploadBytesResumable(ref, file)
+                                            task.on('state_changed',
+                                                (snapshot) => {
+                                                    const pct = Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100)
+                                                    setUploadProgress(pct)
+                                                },
+                                                (error) => {
+                                                    console.error('Upload failed', error)
+                                                    alert('File upload failed. Please try again.')
+                                                    setUploadingMaterial(false)
+                                                },
+                                                async () => {
+                                                    const downloadUrl = await getDownloadURL(task.snapshot.ref)
+                                                    setNewMaterial(prev => ({ ...prev, url: downloadUrl }))
+                                                    setUploadingMaterial(false)
+                                                }
+                                            )
+                                        } catch (err) {
+                                            console.error('Upload init error', err)
+                                            alert('Could not start upload.')
+                                            setUploadingMaterial(false)
+                                        }
+                                    }}
+                                    className="w-full"
+                                />
+                                {uploadingMaterial && (
+                                    <div className="mt-2">
+                                        <div className="w-full bg-gray-200 rounded h-2">
+                                            <div className="bg-blue-600 h-2 rounded" style={{ width: `${uploadProgress}%` }} />
+                                        </div>
+                                        <p className="text-xs text-gray-600 mt-1">Uploading… {uploadProgress}%</p>
+                                    </div>
+                                )}
+                                {!uploadingMaterial && newMaterial.url && materialFile && (
+                                    <p className="text-xs text-green-600 mt-2">File uploaded. URL attached.</p>
+                                )}
+                            </div>
                         </div>
                         <div className="flex gap-3 mt-6">
                             <button
@@ -2180,6 +2268,9 @@ const SCMS = () => {
                                     setShowMaterialModal(false)
                                     setSelectedCourseForAction(null)
                                     setNewMaterial({ title: '', type: 'document', url: '', courseId: '' })
+                                    setMaterialFile(null)
+                                    setUploadProgress(0)
+                                    setUploadingMaterial(false)
                                 }}
                                 className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
                             >
@@ -2188,6 +2279,7 @@ const SCMS = () => {
                             <button
                                 onClick={addMaterial}
                                 className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                                disabled={uploadingMaterial}
                             >
                                 Add Material
                             </button>
