@@ -1045,946 +1045,1003 @@ const SCMS = () => {
     }
 
     const displayUser = userProfile ?? { name: 'User', role: 'student' }
+    const userInitials = (displayUser.name || 'U')
+        .split(' ')
+        .filter(Boolean)
+        .map((part) => part[0])
+        .join('')
+        .slice(0, 2)
+        .toUpperCase()
+
+    const navigationItems = [
+        { label: 'Dashboard', icon: Home, view: 'dashboard' },
+        {
+            label:
+                activeRole === 'admin'
+                    ? 'Manage Courses'
+                    : activeRole === 'lecturer'
+                        ? 'My Courses'
+                        : 'Courses',
+            icon: Book,
+            view: 'courses',
+        },
+        {
+            label: activeRole === 'admin' ? 'All Students' : 'Schedule',
+            icon: activeRole === 'admin' ? Users : Calendar,
+            view: activeRole === 'admin' ? 'students' : 'schedule',
+        },
+        { label: 'Reports', icon: BarChart3, view: 'reports' },
+        ...(activeRole === 'admin' ? [{ label: 'Settings', icon: Settings, view: 'settings' }] : []),
+        ...(activeRole === 'student' ? [{ label: 'Profile', icon: UserCircle, view: 'profile' }] : []),
+        { label: 'Logout', icon: LogOut, action: handleLogout, variant: 'danger' },
+    ]
 
     return (
         <div className="flex h-screen bg-gray-100 overflow-hidden">
-            <aside className={`${sidebarOpen ? 'w-64' : 'w-20'} bg-white shadow-xl transition-all duration-300 flex flex-col`}>
-                <div className="flex items-center justify-between p-5 border-b">
-                    {sidebarOpen && <h1 className="text-2xl font-extrabold text-blue-600">SCMS</h1>}
-                    <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-2 hover:bg-gray-200 rounded-lg">
+            <aside className={`${sidebarOpen ? 'w-64' : 'w-14'} bg-white shadow-xl transition-all duration-300 flex flex-col`}>
+                <div className="flex items-center justify-end px-3 py-2 border-b">
+                    <button
+                        onClick={() => setSidebarOpen(!sidebarOpen)}
+                        className="h-10 w-10 flex items-center justify-center hover:bg-gray-200 rounded-xl transition-colors"
+                    >
                         <Menu className="w-5 h-5 text-gray-600" />
                     </button>
                 </div>
 
-                <nav className="p-4 space-y-1 flex-1">
-                    {[
-                        { label: 'Dashboard', icon: Home, view: 'dashboard' },
-                        { label: activeRole === 'admin' ? 'Manage Courses' : activeRole === 'lecturer' ? 'My Courses' : 'Courses', icon: Book, view: 'courses' },
-                        { label: activeRole === 'admin' ? 'All Students' : 'Schedule', icon: activeRole === 'admin' ? Users : Calendar, view: activeRole === 'admin' ? 'students' : 'schedule' },
-                        { label: 'Reports', icon: BarChart3, view: 'reports' },
-                        ...(activeRole === 'admin' ? [{ label: 'Settings', icon: Settings, view: 'settings' }] : []),
-                        ...(activeRole === 'student' ? [{ label: 'Profile', icon: UserCircle, view: 'profile' }] : []),
-                    ].map((item) => (
-                        <button
-                            key={item.view}
-                            onClick={() => setCurrentView(item.view)}
-                            className={`flex items-center gap-3 w-full px-4 py-3 rounded-lg font-medium transition ${currentView === item.view
-                                ? 'bg-blue-50 text-blue-600'
-                                : 'text-gray-700 hover:bg-blue-50 hover:text-blue-600'
-                                }`}
-                        >
-                            <item.icon className="w-5 h-5" />
-                            {sidebarOpen && item.label}
-                        </button>
-                    ))}
-                </nav>
-
-                <div className="p-4 border-t">
+                <nav className={`flex-1 pb-6 ${sidebarOpen ? 'px-4 space-y-2' : 'px-2 space-y-1'}`}>
                     {sidebarOpen && (
-                        <div className="mb-4">
-                            <p className="text-sm font-semibold text-gray-800">{displayUser.name}</p>
-                            <p className="text-xs text-gray-500 capitalize">{displayUser.role}</p>
-                            {displayUser.program && (
-                                <p className="text-xs text-gray-400 mt-1">{displayUser.program}</p>
-                            )}
+                        <div className="pt-2 pb-4">
+                            <h1 className="text-2xl font-extrabold text-blue-600">SCMS</h1>
                         </div>
                     )}
-                    <button
-                        onClick={handleLogout}
-                        className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 text-sm font-medium transition"
-                    >
-                        <LogOut className="w-4 h-4" />
-                        {sidebarOpen && 'Logout'}
-                    </button>
-                </div>
+                    {navigationItems.map((item) => {
+                        const isActive = !!item.view && currentView === item.view
+                        const buttonClasses = [
+                            'flex items-center gap-3 w-full px-4 py-3 rounded-lg font-medium transition',
+                            isActive
+                                ? 'bg-blue-50 text-blue-600'
+                                : item.variant === 'danger'
+                                    ? 'text-red-600 hover:bg-red-50 hover:text-red-600'
+                                    : 'text-gray-700 hover:bg-blue-50 hover:text-blue-600',
+                        ].join(' ')
+
+                        return (
+                            <button
+                                key={item.label}
+                                onClick={() => (item.view ? setCurrentView(item.view) : item.action?.())}
+                                className={buttonClasses}
+                            >
+                                <item.icon className="w-5 h-5" />
+                                {sidebarOpen && item.label}
+                            </button>
+                        )
+                    })}
+                </nav>
             </aside>
 
-            <main className="flex-1 p-8 overflow-y-auto">
-                {loading && (
-                    <div className="flex items-center justify-center h-64">
-                        <div className="text-center space-y-3">
-                            <div className="h-12 w-12 border-4 border-blue-600/30 border-t-blue-600 rounded-full animate-spin mx-auto" />
-                            <p className="text-sm text-gray-600">Loading...</p>
+            <main className="flex-1 flex flex-col overflow-hidden">
+                <div className="bg-white border-b px-6 sm:px-10 py-10 shadow-sm">
+                    <div className="max-w-4xl mx-auto space-y-6 text-center">
+                        <div className="space-y-3">
+                            <h1 className="text-3xl font-bold text-gray-800">
+                                Welcome back, {displayUser.name || 'Student'}!
+                            </h1>
+                            <p className="text-base text-gray-500">Ready to continue your learning journey?</p>
                         </div>
-                    </div>
-                )}
-
-                {!loading && currentView === 'dashboard' && (
-                    <div className="space-y-8">
-                        <header className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-3xl p-8 text-white shadow-lg">
-                            <p className="text-sm uppercase tracking-widest text-white/60">Dashboard</p>
-                            <h1 className="text-3xl font-extrabold mt-2">Welcome back, {displayUser.name}!</h1>
-                            <p className="text-blue-100 mt-1">
-                                {activeRole === 'student'
-                                    ? 'Ready to continue your learning journey?'
-                                    : activeRole === 'lecturer'
-                                        ? 'Your classrooms are waiting. Let&apos;s make today insightful.'
-                                        : 'Monitor campus metrics and keep everything running smoothly.'}
-                            </p>
-                            <div className="mt-4 flex flex-wrap gap-3 text-sm">
-                                <span className="bg-white/15 px-4 py-2 rounded-lg">
-                                    Role: <strong className="uppercase tracking-wide">{activeRole}</strong>
+                        <div className="flex flex-col items-center gap-4">
+                            <div className="flex items-center gap-4 bg-gray-50 border border-gray-100 rounded-2xl px-5 py-4 shadow-sm">
+                                <div className="h-14 w-14 rounded-full bg-blue-100 text-blue-600 font-semibold flex items-center justify-center text-lg">
+                                    {userInitials}
+                                </div>
+                                <div className="text-left">
+                                    <p className="text-base font-semibold text-gray-800 capitalize">{displayUser.name || 'Student'}</p>
+                                    <p className="text-sm text-gray-500 capitalize">Role: {displayUser.role}</p>
+                                    {displayUser.program && (
+                                        <p className="text-sm text-gray-500">Program: {displayUser.program}</p>
+                                    )}
+                                </div>
+                            </div>
+                            <div className="flex flex-wrap justify-center gap-3 text-sm text-gray-600">
+                                <span className="px-4 py-2 rounded-full bg-blue-50 text-blue-600 font-medium">
+                                    Role: <span className="capitalize">{displayUser.role}</span>
                                 </span>
                                 {displayUser.program && (
-                                    <span className="bg-white/15 px-4 py-2 rounded-lg">
-                                        Program: <strong>{displayUser.program}</strong>
+                                    <span className="px-4 py-2 rounded-full bg-purple-50 text-purple-600 font-medium">
+                                        Program: {displayUser.program}
                                     </span>
                                 )}
                             </div>
-                        </header>
-
-                        <section className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                            {stats.map((item, i) => (
-                                <div
-                                    key={i}
-                                    className={`bg-gradient-to-br ${item.color} text-white p-6 rounded-xl shadow-lg flex items-center gap-4 card-hover`}
-                                >
-                                    <item.icon className="w-8 h-8 opacity-90" />
-                                    <div>
-                                        <p className="text-sm opacity-80">{item.label}</p>
-                                        <p className="text-3xl font-bold">{item.value}</p>
+                        </div>
+                        <div className="flex-1 overflow-y-auto p-8">
+                            {loading && (
+                                <div className="flex items-center justify-center h-64">
+                                    <div className="text-center space-y-3">
+                                        <div className="h-12 w-12 border-4 border-blue-600/30 border-t-blue-600 rounded-full animate-spin mx-auto" />
+                                        <p className="text-sm text-gray-600">Loading...</p>
                                     </div>
                                 </div>
-                            ))}
-                        </section>
-
-                        <section>
-                            <div className="flex justify-between items-center mb-3">
-                                <h2 className="text-2xl font-bold text-gray-800">
-                                    {activeRole === 'admin' ? 'Recent Courses' : activeRole === 'lecturer' ? 'My Courses' : 'My Enrolled Courses'}
-                                </h2>
-                                <button onClick={() => setCurrentView('courses')} className="text-blue-600 font-medium hover:underline">View All</button>
-                            </div>
-
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                {activeRole === 'student' ? (
-                                    coursesData
-                                        .filter(c => enrollments.some(e => e.courseId === c.id && e.studentId === userProfile.uid))
-                                        .slice(0, 2)
-                                        .map((course, i) => {
-                                            const colors = ['bg-blue-600', 'bg-orange-500', 'bg-purple-500', 'bg-green-500']
-                                            const color = colors[i % colors.length]
-                                            return (
-                                                <div key={course.id} className="bg-white rounded-xl p-6 shadow card-hover cursor-pointer" onClick={() => setCurrentView('courses')}>
-                                                    <div className="flex justify-between items-center mb-4">
-                                                        <div className={`${color} w-12 h-12 rounded-xl flex items-center justify-center shadow-md`}>
-                                                            <Book className="text-white w-6 h-6" />
-                                                        </div>
-                                                        <ChevronRight className="text-gray-400" />
-                                                    </div>
-                                                    <h3 className="font-bold text-lg text-gray-800">{course.name || 'Unnamed Course'}</h3>
-                                                    <p className="text-sm text-gray-600">by {course.instructor || 'TBA'}</p>
-                                                    <div className="flex justify-between text-xs text-gray-500 mt-4">
-                                                        <span>{course.credits || 3} Credits</span>
-                                                        <span>{course.schedule || 'TBA'}</span>
-                                                    </div>
-                                                </div>
-                                            )
-                                        })
-                                ) : activeRole === 'lecturer' ? (
-                                    coursesData.slice(0, 2).map((course, i) => {
-                                        const colors = ['bg-blue-600', 'bg-orange-500', 'bg-purple-500', 'bg-green-500']
-                                        const color = colors[i % colors.length]
-                                        return (
-                                            <div key={course.id} className="bg-white rounded-xl p-6 shadow card-hover cursor-pointer" onClick={() => setCurrentView('courses')}>
-                                                <div className="flex justify-between items-center mb-4">
-                                                    <div className={`${color} w-12 h-12 rounded-xl flex items-center justify-center shadow-md`}>
-                                                        <Book className="text-white w-6 h-6" />
-                                                    </div>
-                                                    <ChevronRight className="text-gray-400" />
-                                                </div>
-                                                <h3 className="font-bold text-lg text-gray-800">{course.name || 'Unnamed Course'}</h3>
-                                                <p className="text-sm text-gray-600">Code: {course.code || 'N/A'}</p>
-                                                <div className="flex justify-between text-xs text-gray-500 mt-4">
-                                                    <span>{course.enrolled || 0} Students</span>
-                                                    <span>{course.schedule || 'TBA'}</span>
-                                                </div>
-                                            </div>
-                                        )
-                                    })
-                                ) : (
-                                    coursesData.slice(0, 2).map((course, i) => {
-                                        const colors = ['bg-blue-600', 'bg-orange-500', 'bg-purple-500', 'bg-green-500']
-                                        const color = colors[i % colors.length]
-                                        return (
-                                            <div key={course.id} className="bg-white rounded-xl p-6 shadow card-hover cursor-pointer" onClick={() => setCurrentView('courses')}>
-                                                <div className="flex justify-between items-center mb-4">
-                                                    <div className={`${color} w-12 h-12 rounded-xl flex items-center justify-center shadow-md`}>
-                                                        <Book className="text-white w-6 h-6" />
-                                                    </div>
-                                                    <ChevronRight className="text-gray-400" />
-                                                </div>
-                                                <h3 className="font-bold text-lg text-gray-800">{course.name || 'Unnamed Course'}</h3>
-                                                <p className="text-sm text-gray-600">Instructor: {course.instructor || 'TBA'}</p>
-                                                <div className="flex justify-between text-xs text-gray-500 mt-4">
-                                                    <span>{course.enrolled || 0} Enrolled</span>
-                                                    <span>{course.capacity || 30} Capacity</span>
-                                                </div>
-                                            </div>
-                                        )
-                                    })
-                                )}
-                                {((activeRole === 'student' && coursesData.filter(c => enrollments.some(e => e.courseId === c.id && e.studentId === userProfile.uid)).length === 0) ||
-                                    (activeRole === 'lecturer' && coursesData.length === 0) ||
-                                    (activeRole === 'admin' && coursesData.length === 0)) && (
-                                        <div className="col-span-2 bg-white rounded-xl p-6 shadow text-center text-gray-500">
-                                            {activeRole === 'student' ? 'No enrolled courses yet. Enroll in courses to see them here.' :
-                                                activeRole === 'lecturer' ? 'No courses assigned yet.' :
-                                                    'No courses created yet. Create courses to see them here.'}
-                                        </div>
-                                    )}
-                            </div>
-                        </section>
-
-                        <section className="bg-white p-6 rounded-xl shadow space-y-4">
-                            <div className="flex justify-between items-center">
-                                <h2 className="text-xl font-bold text-gray-800">Today&apos;s Schedule</h2>
-                                <button onClick={() => setCurrentView('schedule')} className="text-sm text-blue-600 hover:text-blue-700 font-medium">View Calendar</button>
-                            </div>
-                            <div className="space-y-3">
-                                {activeRole === 'student' ? (
-                                    coursesData
-                                        .filter(c => enrollments.some(e => e.courseId === c.id && e.studentId === userProfile.uid))
-                                        .slice(0, 3)
-                                        .map((course, i) => {
-                                            const colors = ['bg-blue-600', 'bg-orange-500', 'bg-purple-500', 'bg-green-500', 'bg-pink-500']
-                                            const color = colors[i % colors.length]
-                                            return (
-                                                <div key={course.id} className="flex gap-4 items-center bg-gray-50 border rounded-lg p-3 hover:bg-gray-100 transition">
-                                                    <div className={`${color} w-2 h-10 rounded-full`} />
-                                                    <div>
-                                                        <p className="font-semibold text-gray-800">{course.name || 'Unnamed Course'}</p>
-                                                        <p className="text-sm text-gray-600">{course.schedule || 'TBA'}</p>
-                                                        <p className="text-xs text-gray-500">Code: {course.code || 'N/A'}</p>
-                                                    </div>
-                                                </div>
-                                            )
-                                        })
-                                ) : activeRole === 'lecturer' ? (
-                                    coursesData.slice(0, 3).map((course, i) => {
-                                        const colors = ['bg-blue-600', 'bg-orange-500', 'bg-purple-500', 'bg-green-500']
-                                        const color = colors[i % colors.length]
-                                        return (
-                                            <div key={course.id} className="flex gap-4 items-center bg-gray-50 border rounded-lg p-3 hover:bg-gray-100 transition">
-                                                <div className={`${color} w-2 h-10 rounded-full`} />
-                                                <div>
-                                                    <p className="font-semibold text-gray-800">{course.name || 'Unnamed Course'}</p>
-                                                    <p className="text-sm text-gray-600">{course.schedule || 'TBA'}</p>
-                                                    <p className="text-xs text-gray-500">{course.enrolled || 0} students</p>
-                                                </div>
-                                            </div>
-                                        )
-                                    })
-                                ) : (
-                                    coursesData.slice(0, 3).map((course, i) => {
-                                        const colors = ['bg-blue-600', 'bg-orange-500', 'bg-purple-500', 'bg-green-500']
-                                        const color = colors[i % colors.length]
-                                        return (
-                                            <div key={course.id} className="flex gap-4 items-center bg-gray-50 border rounded-lg p-3 hover:bg-gray-100 transition">
-                                                <div className={`${color} w-2 h-10 rounded-full`} />
-                                                <div>
-                                                    <p className="font-semibold text-gray-800">{course.name || 'Unnamed Course'}</p>
-                                                    <p className="text-sm text-gray-600">{course.schedule || 'TBA'}</p>
-                                                    <p className="text-xs text-gray-500">{course.enrolled || 0}/{course.capacity || 30} enrolled</p>
-                                                </div>
-                                            </div>
-                                        )
-                                    })
-                                )}
-                                {((activeRole === 'student' && coursesData.filter(c => enrollments.some(e => e.courseId === c.id && e.studentId === userProfile.uid)).length === 0) ||
-                                    (activeRole === 'lecturer' && coursesData.length === 0) ||
-                                    (activeRole === 'admin' && coursesData.length === 0)) && (
-                                        <div className="text-center text-gray-500 py-4">
-                                            No scheduled courses
-                                        </div>
-                                    )}
-                            </div>
-                        </section>
-                    </div>
-                )}
-
-                {!loading && currentView === 'courses' && activeRole === 'admin' && (
-                    <div className="space-y-6">
-                        <div className="flex justify-between items-center">
-                            <h1 className="text-3xl font-bold text-gray-800">Manage Courses</h1>
-                            <button
-                                onClick={() => {
-                                    setSelectedCourse(null)
-                                    setNewCourse({ name: '', code: '', instructor: '', credits: 3, schedule: '', capacity: 30 })
-                                    setShowCourseModal(true)
-                                }}
-                                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
-                            >
-                                <Book className="w-4 h-4" />
-                                Add Course
-                            </button>
-                        </div>
-
-                        <div className="bg-white rounded-xl shadow p-6">
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                                <input
-                                    type="text"
-                                    placeholder="Search courses..."
-                                    value={searchTerm}
-                                    onChange={(e) => setSearchTerm(e.target.value)}
-                                    className="p-3 border rounded-lg focus:ring-2 focus:ring-blue-500"
-                                />
-                            </div>
-
-                            <div className="overflow-x-auto">
-                                <table className="w-full">
-                                    <thead className="bg-gray-50">
-                                        <tr>
-                                            <th className="p-3 text-left text-sm font-semibold text-gray-700">Course Code</th>
-                                            <th className="p-3 text-left text-sm font-semibold text-gray-700">Name</th>
-                                            <th className="p-3 text-left text-sm font-semibold text-gray-700">Instructor</th>
-                                            <th className="p-3 text-left text-sm font-semibold text-gray-700">Enrolled</th>
-                                            <th className="p-3 text-left text-sm font-semibold text-gray-700">Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {coursesData.filter(c =>
-                                            c.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                                            c.code?.toLowerCase().includes(searchTerm.toLowerCase())
-                                        ).map(course => (
-                                            <tr key={course.id} className="border-b hover:bg-gray-50">
-                                                <td className="p-3">{course.code || 'N/A'}</td>
-                                                <td className="p-3 font-medium">{course.name || 'Unnamed Course'}</td>
-                                                <td className="p-3">{course.instructor || 'Unassigned'}</td>
-                                                <td className="p-3">{course.enrolled || 0} / {course.capacity || 30}</td>
-                                                <td className="p-3">
-                                                    <div className="flex gap-2">
-                                                        <button
-                                                            onClick={() => {
-                                                                setSelectedCourse(course)
-                                                                setNewCourse(course)
-                                                                setShowCourseModal(true)
-                                                            }}
-                                                            className="px-3 py-1 text-sm bg-blue-50 text-blue-600 rounded hover:bg-blue-100"
-                                                        >
-                                                            Edit
-                                                        </button>
-                                                        <button
-                                                            onClick={() => deleteCourse(course.id)}
-                                                            className="px-3 py-1 text-sm bg-red-50 text-red-600 rounded hover:bg-red-100"
-                                                        >
-                                                            Delete
-                                                        </button>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-                )}
-
-                {!loading && currentView === 'students' && activeRole === 'admin' && (
-                    <div className="space-y-6">
-                        <div className="flex justify-between items-center">
-                            <h1 className="text-3xl font-bold text-gray-800">All Students</h1>
-                        </div>
-
-                        <div className="bg-white rounded-xl shadow p-6">
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                                <input
-                                    type="text"
-                                    placeholder="Search students..."
-                                    value={searchTerm}
-                                    onChange={(e) => setSearchTerm(e.target.value)}
-                                    className="p-3 border rounded-lg focus:ring-2 focus:ring-blue-500"
-                                />
-                                <select
-                                    value={filterProgram}
-                                    onChange={(e) => setFilterProgram(e.target.value)}
-                                    className="p-3 border rounded-lg focus:ring-2 focus:ring-blue-500"
-                                >
-                                    <option value="">All Programs</option>
-                                    {[...new Set(students.map(s => s.program).filter(Boolean))].map(prog => (
-                                        <option key={prog} value={prog}>{prog}</option>
-                                    ))}
-                                </select>
-                            </div>
-
-                            <div className="overflow-x-auto">
-                                <table className="w-full">
-                                    <thead className="bg-gray-50">
-                                        <tr>
-                                            <th className="p-3 text-left text-sm font-semibold text-gray-700">Student ID</th>
-                                            <th className="p-3 text-left text-sm font-semibold text-gray-700">Name</th>
-                                            <th className="p-3 text-left text-sm font-semibold text-gray-700">Email</th>
-                                            <th className="p-3 text-left text-sm font-semibold text-gray-700">Program</th>
-                                            <th className="p-3 text-left text-sm font-semibold text-gray-700">Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {students.filter(s => {
-                                            const matchesSearch = !searchTerm ||
-                                                s.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                                                s.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                                                s.studentId?.includes(searchTerm)
-                                            const matchesProgram = !filterProgram || s.program === filterProgram
-                                            return matchesSearch && matchesProgram
-                                        }).map(student => (
-                                            <tr key={student.id} className="border-b hover:bg-gray-50">
-                                                <td className="p-3">{student.studentId || 'N/A'}</td>
-                                                <td className="p-3 font-medium">{student.name}</td>
-                                                <td className="p-3">{student.email}</td>
-                                                <td className="p-3">{student.program || 'N/A'}</td>
-                                                <td className="p-3">
-                                                    <button
-                                                        onClick={() => {
-                                                            setSelectedStudent(student)
-                                                            setShowStudentModal(true)
-                                                        }}
-                                                        className="px-3 py-1 text-sm bg-blue-50 text-blue-600 rounded hover:bg-blue-100"
-                                                    >
-                                                        Edit
-                                                    </button>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-                )}
-
-                {!loading && currentView === 'reports' && (
-                    <div className="space-y-6">
-                        <h1 className="text-3xl font-bold text-gray-800">Reports & Analytics</h1>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            {activeRole === 'admin' && (
-                                <>
-                                    <div className="bg-white rounded-xl shadow p-6">
-                                        <h3 className="text-xl font-bold text-gray-800 mb-4">System Overview</h3>
-                                        <div className="space-y-3">
-                                            <div className="flex justify-between">
-                                                <span className="text-gray-600">Total Students:</span>
-                                                <span className="font-semibold">{students.length}</span>
-                                            </div>
-                                            <div className="flex justify-between">
-                                                <span className="text-gray-600">Total Courses:</span>
-                                                <span className="font-semibold">{coursesData.length}</span>
-                                            </div>
-                                            <div className="flex justify-between">
-                                                <span className="text-gray-600">Total Lecturers:</span>
-                                                <span className="font-semibold">{lecturers.length}</span>
-                                            </div>
-                                            <div className="flex justify-between">
-                                                <span className="text-gray-600">Total Enrollments:</span>
-                                                <span className="font-semibold">
-                                                    {coursesData.reduce((sum, c) => sum + (c.enrolled || 0), 0)}
-                                                </span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div className="bg-white rounded-xl shadow p-6">
-                                        <h3 className="text-xl font-bold text-gray-800 mb-4">Course Statistics</h3>
-                                        <div className="space-y-3">
-                                            <div className="flex justify-between">
-                                                <span className="text-gray-600">Average Enrollment:</span>
-                                                <span className="font-semibold">
-                                                    {coursesData.length > 0
-                                                        ? (coursesData.reduce((sum, c) => sum + (c.enrolled || 0), 0) / coursesData.length).toFixed(1)
-                                                        : 0}
-                                                </span>
-                                            </div>
-                                            <div className="flex justify-between">
-                                                <span className="text-gray-600">Full Courses:</span>
-                                                <span className="font-semibold">
-                                                    {coursesData.filter(c => (c.enrolled || 0) >= (c.capacity || 30)).length}
-                                                </span>
-                                            </div>
-                                            <div className="flex justify-between">
-                                                <span className="text-gray-600">Available Spots:</span>
-                                                <span className="font-semibold">
-                                                    {coursesData.reduce((sum, c) => sum + ((c.capacity || 30) - (c.enrolled || 0)), 0)}
-                                                </span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </>
                             )}
-                            {activeRole === 'lecturer' && (
-                                <div className="bg-white rounded-xl shadow p-6">
-                                    <h3 className="text-xl font-bold text-gray-800 mb-4">Teaching Statistics</h3>
-                                    <div className="space-y-3">
-                                        <div className="flex justify-between">
-                                            <span className="text-gray-600">My Courses:</span>
-                                            <span className="font-semibold">{coursesData.length}</span>
-                                        </div>
-                                        <div className="flex justify-between">
-                                            <span className="text-gray-600">Total Students:</span>
-                                            <span className="font-semibold">
-                                                {coursesData.reduce((sum, c) => sum + (c.enrolled || 0), 0)}
+
+                            {!loading && currentView === 'dashboard' && (
+                                <div className="space-y-8">
+                                    <header className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-3xl p-8 text-white shadow-lg">
+                                        <p className="text-sm uppercase tracking-widest text-white/60">Overview</p>
+                                        <h1 className="text-3xl font-extrabold mt-2">Your campus snapshot</h1>
+                                        <p className="text-blue-100 mt-1">
+                                            {activeRole === 'student'
+                                                ? 'Stay on top of your classes, credits, and progress.'
+                                                : activeRole === 'lecturer'
+                                                    ? 'Keep track of your courses and classroom updates.'
+                                                    : 'Monitor key metrics to keep everything running smoothly.'}
+                                        </p>
+                                        <div className="mt-4 flex flex-wrap gap-3 text-sm">
+                                            <span className="bg-white/15 px-4 py-2 rounded-lg">
+                                                Role: <strong className="uppercase tracking-wide">{activeRole}</strong>
                                             </span>
+                                            {displayUser.program && (
+                                                <span className="bg-white/15 px-4 py-2 rounded-lg">
+                                                    Program: <strong>{displayUser.program}</strong>
+                                                </span>
+                                            )}
                                         </div>
-                                        <div className="flex justify-between">
-                                            <span className="text-gray-600">Course Materials:</span>
-                                            <span className="font-semibold">{courseMaterials.length}</span>
-                                        </div>
-                                        <div className="flex justify-between">
-                                            <span className="text-gray-600">Grades Entered:</span>
-                                            <span className="font-semibold">{grades.length}</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-                            {activeRole === 'student' && (
-                                <div className="bg-white rounded-xl shadow p-6">
-                                    <h3 className="text-xl font-bold text-gray-800 mb-4">Academic Progress</h3>
-                                    <div className="space-y-3">
-                                        <div className="flex justify-between">
-                                            <span className="text-gray-600">Enrolled Courses:</span>
-                                            <span className="font-semibold">{enrollments.length}</span>
-                                        </div>
-                                        <div className="flex justify-between">
-                                            <span className="text-gray-600">Total Grades:</span>
-                                            <span className="font-semibold">{grades.length}</span>
-                                        </div>
-                                        <div className="flex justify-between">
-                                            <span className="text-gray-600">Average Grade:</span>
-                                            <span className="font-semibold">
-                                                {grades.length > 0
-                                                    ? (grades.reduce((sum, g) => sum + parseFloat(g.grade || 0), 0) / grades.length).toFixed(1)
-                                                    : 'N/A'}
-                                            </span>
-                                        </div>
-                                        <div className="flex justify-between">
-                                            <span className="text-gray-600">GPA:</span>
-                                            <span className="font-semibold">{userProfile?.gpa || 'N/A'}</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                )}
+                                    </header>
 
-                {!loading && currentView === 'settings' && activeRole === 'admin' && (
-                    <div className="space-y-6">
-                        <h1 className="text-3xl font-bold text-gray-800">System Settings</h1>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div className="bg-white rounded-xl shadow p-6">
-                                <h3 className="text-xl font-bold text-gray-800 mb-4">Course Settings</h3>
-                                <div className="space-y-4">
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-2">Default Course Capacity</label>
-                                        <input
-                                            type="number"
-                                            defaultValue="30"
-                                            className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-2">Default Credits</label>
-                                        <input
-                                            type="number"
-                                            defaultValue="3"
-                                            className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500"
-                                        />
-                                    </div>
-                                    <button className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-                                        Save Course Settings
-                                    </button>
-                                </div>
-                            </div>
-                            <div className="bg-white rounded-xl shadow p-6">
-                                <h3 className="text-xl font-bold text-gray-800 mb-4">User Management</h3>
-                                <div className="space-y-4">
-                                    <div className="flex justify-between items-center">
-                                        <span className="text-gray-700">Total Users:</span>
-                                        <span className="font-semibold">{students.length + lecturers.length + 1}</span>
-                                    </div>
-                                    <div className="flex justify-between items-center">
-                                        <span className="text-gray-700">Students:</span>
-                                        <span className="font-semibold">{students.length}</span>
-                                    </div>
-                                    <div className="flex justify-between items-center">
-                                        <span className="text-gray-700">Lecturers:</span>
-                                        <span className="font-semibold">{lecturers.length}</span>
-                                    </div>
-                                    <div className="flex justify-between items-center">
-                                        <span className="text-gray-700">Admins:</span>
-                                        <span className="font-semibold">1</span>
-                                    </div>
-                                </div>
-                            </div>
-                            <div className="bg-white rounded-xl shadow p-6">
-                                <h3 className="text-xl font-bold text-gray-800 mb-4">System Information</h3>
-                                <div className="space-y-2 text-sm">
-                                    <div className="flex justify-between">
-                                        <span className="text-gray-600">Version:</span>
-                                        <span className="text-gray-800">1.0.0</span>
-                                    </div>
-                                    <div className="flex justify-between">
-                                        <span className="text-gray-600">Database:</span>
-                                        <span className="text-gray-800">Firebase Firestore</span>
-                                    </div>
-                                    <div className="flex justify-between">
-                                        <span className="text-gray-600">Last Backup:</span>
-                                        <span className="text-gray-800">Today</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                )}
-
-                {!loading && currentView === 'profile' && activeRole === 'student' && (
-                    <div className="space-y-6">
-                        <h1 className="text-3xl font-bold text-gray-800">My Profile</h1>
-                        <div className="bg-white rounded-xl shadow p-6">
-                            <div className="space-y-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">Full Name</label>
-                                    <input
-                                        type="text"
-                                        value={userProfile?.name || ''}
-                                        onChange={(e) => {
-                                            const updated = { ...userProfile, name: e.target.value }
-                                            setUserProfile(updated)
-                                        }}
-                                        className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">Student ID</label>
-                                    <input
-                                        type="text"
-                                        value={userProfile?.studentId || ''}
-                                        onChange={(e) => {
-                                            const updated = { ...userProfile, studentId: e.target.value }
-                                            setUserProfile(updated)
-                                        }}
-                                        className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">Program</label>
-                                    <input
-                                        type="text"
-                                        value={userProfile?.program || ''}
-                                        onChange={(e) => {
-                                            const updated = { ...userProfile, program: e.target.value }
-                                            setUserProfile(updated)
-                                        }}
-                                        className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">Year</label>
-                                    <select
-                                        value={userProfile?.year || ''}
-                                        onChange={(e) => {
-                                            const updated = { ...userProfile, year: e.target.value }
-                                            setUserProfile(updated)
-                                        }}
-                                        className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500"
-                                    >
-                                        <option value="">Select Year</option>
-                                        <option value="1st Year">1st Year</option>
-                                        <option value="2nd Year">2nd Year</option>
-                                        <option value="3rd Year">3rd Year</option>
-                                        <option value="4th Year">4th Year</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">GPA</label>
-                                    <input
-                                        type="number"
-                                        step="0.01"
-                                        min="0"
-                                        max="4"
-                                        value={userProfile?.gpa || ''}
-                                        onChange={(e) => {
-                                            const updated = { ...userProfile, gpa: parseFloat(e.target.value) || 0 }
-                                            setUserProfile(updated)
-                                        }}
-                                        className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
-                                    <input
-                                        type="email"
-                                        value={userProfile?.email || ''}
-                                        disabled
-                                        className="w-full p-3 border rounded-lg bg-gray-50"
-                                    />
-                                </div>
-                                <button
-                                    onClick={async () => {
-                                        try {
-                                            await updateDoc(doc(db, 'users', userProfile.uid), {
-                                                name: userProfile.name,
-                                                studentId: userProfile.studentId,
-                                                program: userProfile.program,
-                                                year: userProfile.year,
-                                                gpa: userProfile.gpa
-                                            })
-                                            alert('Profile updated successfully!')
-                                        } catch (error) {
-                                            console.error('Failed to update profile', error)
-                                            alert('Failed to update profile. Please try again.')
-                                        }
-                                    }}
-                                    className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-                                >
-                                    Save Profile
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                )}
-
-                {!loading && currentView === 'schedule' && (
-                    <div className="space-y-6">
-                        <h1 className="text-3xl font-bold text-gray-800">Schedule</h1>
-                        <div className="bg-white rounded-xl shadow p-6">
-                            {activeRole === 'student' && coursesData.length > 0 ? (
-                                <div className="space-y-3">
-                                    {coursesData.filter(c => enrollments.some(e => e.courseId === c.id && e.studentId === userProfile.uid)).map((course, i) => {
-                                        const colors = ['bg-blue-600', 'bg-orange-500', 'bg-purple-500', 'bg-green-500', 'bg-pink-500']
-                                        const color = colors[i % colors.length]
-                                        return (
-                                            <div key={course.id} className="flex gap-4 items-center bg-gray-50 border rounded-lg p-4 hover:bg-gray-100 transition">
-                                                <div className={`${color} w-2 h-12 rounded-full`} />
-                                                <div className="flex-1">
-                                                    <p className="font-semibold text-gray-800">{course.name || 'Unnamed Course'}</p>
-                                                    <p className="text-sm text-gray-600">{course.schedule || 'TBA'}</p>
-                                                    <p className="text-xs text-gray-500">Code: {course.code || 'N/A'}</p>
-                                                </div>
-                                            </div>
-                                        )
-                                    })}
-                                </div>
-                            ) : activeRole === 'lecturer' && coursesData.length > 0 ? (
-                                <div className="space-y-3">
-                                    {coursesData.map((course, i) => {
-                                        const colors = ['bg-blue-600', 'bg-orange-500', 'bg-purple-500', 'bg-green-500']
-                                        const color = colors[i % colors.length]
-                                        return (
-                                            <div key={course.id} className="flex gap-4 items-center bg-gray-50 border rounded-lg p-4 hover:bg-gray-100 transition">
-                                                <div className={`${color} w-2 h-12 rounded-full`} />
-                                                <div className="flex-1">
-                                                    <p className="font-semibold text-gray-800">{course.name || 'Unnamed Course'}</p>
-                                                    <p className="text-sm text-gray-600">{course.schedule || 'TBA'}</p>
-                                                    <p className="text-xs text-gray-500">Code: {course.code || 'N/A'} • Students: {course.enrolled || 0}</p>
-                                                </div>
-                                            </div>
-                                        )
-                                    })}
-                                </div>
-                            ) : (
-                                <div className="text-center text-gray-500 py-4">
-                                    No scheduled courses
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                )}
-
-                {!loading && currentView === 'courses' && activeRole === 'lecturer' && (
-                    <div className="space-y-6">
-                        <h1 className="text-3xl font-bold text-gray-800">My Courses</h1>
-                        <div className="grid grid-cols-1 gap-6">
-                            {coursesData.length > 0 ? coursesData.map(course => {
-                                const courseMaterialsList = courseMaterials.filter(m => m.courseId === course.id)
-                                const courseGrades = grades.filter(g => g.courseId === course.id)
-                                return (
-                                    <div key={course.id} className="bg-white rounded-xl p-6 shadow-lg">
-                                        <div className="flex justify-between items-start mb-4">
-                                            <div className="flex items-center gap-4">
-                                                <div className="bg-blue-600 w-12 h-12 rounded-xl flex items-center justify-center shadow-md">
-                                                    <Book className="text-white w-6 h-6" />
-                                                </div>
+                                    <section className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                                        {stats.map((item, i) => (
+                                            <div
+                                                key={i}
+                                                className={`bg-gradient-to-br ${item.color} text-white p-6 rounded-xl shadow-lg flex items-center gap-4 card-hover`}
+                                            >
+                                                <item.icon className="w-8 h-8 opacity-90" />
                                                 <div>
-                                                    <h3 className="font-bold text-lg text-gray-800">{course.name || 'Unnamed Course'}</h3>
-                                                    <p className="text-sm text-gray-600">Code: {course.code || 'N/A'}</p>
-                                                    <p className="text-sm text-gray-500">Schedule: {course.schedule || 'TBA'}</p>
+                                                    <p className="text-sm opacity-80">{item.label}</p>
+                                                    <p className="text-3xl font-bold">{item.value}</p>
                                                 </div>
                                             </div>
+                                        ))}
+                                    </section>
+
+                                    <section>
+                                        <div className="flex justify-between items-center mb-3">
+                                            <h2 className="text-2xl font-bold text-gray-800">
+                                                {activeRole === 'admin' ? 'Recent Courses' : activeRole === 'lecturer' ? 'My Courses' : 'My Enrolled Courses'}
+                                            </h2>
+                                            <button onClick={() => setCurrentView('courses')} className="text-blue-600 font-medium hover:underline">View All</button>
                                         </div>
-                                        <div className="grid grid-cols-3 gap-4 mb-4">
-                                            <div className="bg-blue-50 p-3 rounded-lg">
-                                                <p className="text-sm text-gray-600">Enrolled</p>
-                                                <p className="text-xl font-bold text-blue-600">{course.enrolled || 0}/{course.capacity || 30}</p>
-                                            </div>
-                                            <div className="bg-green-50 p-3 rounded-lg">
-                                                <p className="text-sm text-gray-600">Materials</p>
-                                                <p className="text-xl font-bold text-green-600">{courseMaterialsList.length}</p>
-                                            </div>
-                                            <div className="bg-orange-50 p-3 rounded-lg">
-                                                <p className="text-sm text-gray-600">Grades</p>
-                                                <p className="text-xl font-bold text-orange-600">{courseGrades.length}</p>
-                                            </div>
-                                        </div>
-                                        <div className="flex gap-2 flex-wrap">
-                                            <button
-                                                onClick={async () => {
-                                                    const enrolledStudents = await getEnrolledStudents(course.id)
-                                                    alert(`Enrolled Students: ${enrolledStudents.length}\n${enrolledStudents.map(s => `- ${s.name} (${s.studentId || s.email})`).join('\n')}`)
-                                                }}
-                                                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm"
-                                            >
-                                                View Students
-                                            </button>
-                                            <button
-                                                onClick={() => {
-                                                    setSelectedCourseForAction(course)
-                                                    setShowMaterialModal(true)
-                                                }}
-                                                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm"
-                                            >
-                                                Add Material
-                                            </button>
-                                            <button
-                                                onClick={async () => {
-                                                    setSelectedCourseForAction(course)
-                                                    const enrolled = await getEnrolledStudents(course.id)
-                                                    setEnrolledStudentsForGrade(enrolled)
-                                                    setShowGradeModal(true)
-                                                }}
-                                                className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 text-sm"
-                                            >
-                                                Add Grade
-                                            </button>
-                                        </div>
-                                        {courseMaterialsList.length > 0 && (
-                                            <div className="mt-4 pt-4 border-t">
-                                                <h4 className="font-semibold text-gray-700 mb-2">Course Materials</h4>
-                                                <div className="space-y-2">
-                                                    {courseMaterialsList.map(material => (
-                                                        <div key={material.id} className="flex justify-between items-center bg-gray-50 p-2 rounded">
-                                                            <div>
-                                                                <p className="text-sm font-medium">{material.title}</p>
-                                                                <p className="text-xs text-gray-500">{material.type}</p>
+
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            {activeRole === 'student' ? (
+                                                coursesData
+                                                    .filter(c => enrollments.some(e => e.courseId === c.id && e.studentId === userProfile.uid))
+                                                    .slice(0, 2)
+                                                    .map((course, i) => {
+                                                        const colors = ['bg-blue-600', 'bg-orange-500', 'bg-purple-500', 'bg-green-500']
+                                                        const color = colors[i % colors.length]
+                                                        return (
+                                                            <div key={course.id} className="bg-white rounded-xl p-6 shadow card-hover cursor-pointer" onClick={() => setCurrentView('courses')}>
+                                                                <div className="flex justify-between items-center mb-4">
+                                                                    <div className={`${color} w-12 h-12 rounded-xl flex items-center justify-center shadow-md`}>
+                                                                        <Book className="text-white w-6 h-6" />
+                                                                    </div>
+                                                                    <ChevronRight className="text-gray-400" />
+                                                                </div>
+                                                                <h3 className="font-bold text-lg text-gray-800">{course.name || 'Unnamed Course'}</h3>
+                                                                <p className="text-sm text-gray-600">by {course.instructor || 'TBA'}</p>
+                                                                <div className="flex justify-between text-xs text-gray-500 mt-4">
+                                                                    <span>{course.credits || 3} Credits</span>
+                                                                    <span>{course.schedule || 'TBA'}</span>
+                                                                </div>
                                                             </div>
-                                                            <button
-                                                                onClick={() => deleteMaterial(material.id)}
-                                                                className="px-2 py-1 text-xs bg-red-100 text-red-600 rounded hover:bg-red-200"
-                                                            >
-                                                                Delete
-                                                            </button>
+                                                        )
+                                                    })
+                                            ) : activeRole === 'lecturer' ? (
+                                                coursesData.slice(0, 2).map((course, i) => {
+                                                    const colors = ['bg-blue-600', 'bg-orange-500', 'bg-purple-500', 'bg-green-500']
+                                                    const color = colors[i % colors.length]
+                                                    return (
+                                                        <div key={course.id} className="bg-white rounded-xl p-6 shadow card-hover cursor-pointer" onClick={() => setCurrentView('courses')}>
+                                                            <div className="flex justify-between items-center mb-4">
+                                                                <div className={`${color} w-12 h-12 rounded-xl flex items-center justify-center shadow-md`}>
+                                                                    <Book className="text-white w-6 h-6" />
+                                                                </div>
+                                                                <ChevronRight className="text-gray-400" />
+                                                            </div>
+                                                            <h3 className="font-bold text-lg text-gray-800">{course.name || 'Unnamed Course'}</h3>
+                                                            <p className="text-sm text-gray-600">Code: {course.code || 'N/A'}</p>
+                                                            <div className="flex justify-between text-xs text-gray-500 mt-4">
+                                                                <span>{course.enrolled || 0} Students</span>
+                                                                <span>{course.schedule || 'TBA'}</span>
+                                                            </div>
                                                         </div>
+                                                    )
+                                                })
+                                            ) : (
+                                                coursesData.slice(0, 2).map((course, i) => {
+                                                    const colors = ['bg-blue-600', 'bg-orange-500', 'bg-purple-500', 'bg-green-500']
+                                                    const color = colors[i % colors.length]
+                                                    return (
+                                                        <div key={course.id} className="bg-white rounded-xl p-6 shadow card-hover cursor-pointer" onClick={() => setCurrentView('courses')}>
+                                                            <div className="flex justify-between items-center mb-4">
+                                                                <div className={`${color} w-12 h-12 rounded-xl flex items-center justify-center shadow-md`}>
+                                                                    <Book className="text-white w-6 h-6" />
+                                                                </div>
+                                                                <ChevronRight className="text-gray-400" />
+                                                            </div>
+                                                            <h3 className="font-bold text-lg text-gray-800">{course.name || 'Unnamed Course'}</h3>
+                                                            <p className="text-sm text-gray-600">Instructor: {course.instructor || 'TBA'}</p>
+                                                            <div className="flex justify-between text-xs text-gray-500 mt-4">
+                                                                <span>{course.enrolled || 0} Enrolled</span>
+                                                                <span>{course.capacity || 30} Capacity</span>
+                                                            </div>
+                                                        </div>
+                                                    )
+                                                })
+                                            )}
+                                            {((activeRole === 'student' && coursesData.filter(c => enrollments.some(e => e.courseId === c.id && e.studentId === userProfile.uid)).length === 0) ||
+                                                (activeRole === 'lecturer' && coursesData.length === 0) ||
+                                                (activeRole === 'admin' && coursesData.length === 0)) && (
+                                                    <div className="col-span-2 bg-white rounded-xl p-6 shadow text-center text-gray-500">
+                                                        {activeRole === 'student' ? 'No enrolled courses yet. Enroll in courses to see them here.' :
+                                                            activeRole === 'lecturer' ? 'No courses assigned yet.' :
+                                                                'No courses created yet. Create courses to see them here.'}
+                                                    </div>
+                                                )}
+                                        </div>
+                                    </section>
+
+                                    <section className="bg-white p-6 rounded-xl shadow space-y-4">
+                                        <div className="flex justify-between items-center">
+                                            <h2 className="text-xl font-bold text-gray-800">Today&apos;s Schedule</h2>
+                                            <button onClick={() => setCurrentView('schedule')} className="text-sm text-blue-600 hover:text-blue-700 font-medium">View Calendar</button>
+                                        </div>
+                                        <div className="space-y-3">
+                                            {activeRole === 'student' ? (
+                                                coursesData
+                                                    .filter(c => enrollments.some(e => e.courseId === c.id && e.studentId === userProfile.uid))
+                                                    .slice(0, 3)
+                                                    .map((course, i) => {
+                                                        const colors = ['bg-blue-600', 'bg-orange-500', 'bg-purple-500', 'bg-green-500', 'bg-pink-500']
+                                                        const color = colors[i % colors.length]
+                                                        return (
+                                                            <div key={course.id} className="flex gap-4 items-center bg-gray-50 border rounded-lg p-3 hover:bg-gray-100 transition">
+                                                                <div className={`${color} w-2 h-10 rounded-full`} />
+                                                                <div>
+                                                                    <p className="font-semibold text-gray-800">{course.name || 'Unnamed Course'}</p>
+                                                                    <p className="text-sm text-gray-600">{course.schedule || 'TBA'}</p>
+                                                                    <p className="text-xs text-gray-500">Code: {course.code || 'N/A'}</p>
+                                                                </div>
+                                                            </div>
+                                                        )
+                                                    })
+                                            ) : activeRole === 'lecturer' ? (
+                                                coursesData.slice(0, 3).map((course, i) => {
+                                                    const colors = ['bg-blue-600', 'bg-orange-500', 'bg-purple-500', 'bg-green-500']
+                                                    const color = colors[i % colors.length]
+                                                    return (
+                                                        <div key={course.id} className="flex gap-4 items-center bg-gray-50 border rounded-lg p-3 hover:bg-gray-100 transition">
+                                                            <div className={`${color} w-2 h-10 rounded-full`} />
+                                                            <div>
+                                                                <p className="font-semibold text-gray-800">{course.name || 'Unnamed Course'}</p>
+                                                                <p className="text-sm text-gray-600">{course.schedule || 'TBA'}</p>
+                                                                <p className="text-xs text-gray-500">{course.enrolled || 0} students</p>
+                                                            </div>
+                                                        </div>
+                                                    )
+                                                })
+                                            ) : (
+                                                coursesData.slice(0, 3).map((course, i) => {
+                                                    const colors = ['bg-blue-600', 'bg-orange-500', 'bg-purple-500', 'bg-green-500']
+                                                    const color = colors[i % colors.length]
+                                                    return (
+                                                        <div key={course.id} className="flex gap-4 items-center bg-gray-50 border rounded-lg p-3 hover:bg-gray-100 transition">
+                                                            <div className={`${color} w-2 h-10 rounded-full`} />
+                                                            <div>
+                                                                <p className="font-semibold text-gray-800">{course.name || 'Unnamed Course'}</p>
+                                                                <p className="text-sm text-gray-600">{course.schedule || 'TBA'}</p>
+                                                                <p className="text-xs text-gray-500">{course.enrolled || 0}/{course.capacity || 30} enrolled</p>
+                                                            </div>
+                                                        </div>
+                                                    )
+                                                })
+                                            )}
+                                            {((activeRole === 'student' && coursesData.filter(c => enrollments.some(e => e.courseId === c.id && e.studentId === userProfile.uid)).length === 0) ||
+                                                (activeRole === 'lecturer' && coursesData.length === 0) ||
+                                                (activeRole === 'admin' && coursesData.length === 0)) && (
+                                                    <div className="text-center text-gray-500 py-4">
+                                                        No scheduled courses
+                                                    </div>
+                                                )}
+                                        </div>
+                                    </section>
+                                </div>
+                            )}
+
+                            {!loading && currentView === 'courses' && activeRole === 'admin' && (
+                                <div className="space-y-6">
+                                    <div className="flex justify-between items-center">
+                                        <h1 className="text-3xl font-bold text-gray-800">Manage Courses</h1>
+                                        <button
+                                            onClick={() => {
+                                                setSelectedCourse(null)
+                                                setNewCourse({ name: '', code: '', instructor: '', credits: 3, schedule: '', capacity: 30 })
+                                                setShowCourseModal(true)
+                                            }}
+                                            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
+                                        >
+                                            <Book className="w-4 h-4" />
+                                            Add Course
+                                        </button>
+                                    </div>
+
+                                    <div className="bg-white rounded-xl shadow p-6">
+                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                                            <input
+                                                type="text"
+                                                placeholder="Search courses..."
+                                                value={searchTerm}
+                                                onChange={(e) => setSearchTerm(e.target.value)}
+                                                className="p-3 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                                            />
+                                        </div>
+
+                                        <div className="overflow-x-auto">
+                                            <table className="w-full">
+                                                <thead className="bg-gray-50">
+                                                    <tr>
+                                                        <th className="p-3 text-left text-sm font-semibold text-gray-700">Course Code</th>
+                                                        <th className="p-3 text-left text-sm font-semibold text-gray-700">Name</th>
+                                                        <th className="p-3 text-left text-sm font-semibold text-gray-700">Instructor</th>
+                                                        <th className="p-3 text-left text-sm font-semibold text-gray-700">Enrolled</th>
+                                                        <th className="p-3 text-left text-sm font-semibold text-gray-700">Actions</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {coursesData.filter(c =>
+                                                        c.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                                                        c.code?.toLowerCase().includes(searchTerm.toLowerCase())
+                                                    ).map(course => (
+                                                        <tr key={course.id} className="border-b hover:bg-gray-50">
+                                                            <td className="p-3">{course.code || 'N/A'}</td>
+                                                            <td className="p-3 font-medium">{course.name || 'Unnamed Course'}</td>
+                                                            <td className="p-3">{course.instructor || 'Unassigned'}</td>
+                                                            <td className="p-3">{course.enrolled || 0} / {course.capacity || 30}</td>
+                                                            <td className="p-3">
+                                                                <div className="flex gap-2">
+                                                                    <button
+                                                                        onClick={() => {
+                                                                            setSelectedCourse(course)
+                                                                            setNewCourse(course)
+                                                                            setShowCourseModal(true)
+                                                                        }}
+                                                                        className="px-3 py-1 text-sm bg-blue-50 text-blue-600 rounded hover:bg-blue-100"
+                                                                    >
+                                                                        Edit
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={() => deleteCourse(course.id)}
+                                                                        className="px-3 py-1 text-sm bg-red-50 text-red-600 rounded hover:bg-red-100"
+                                                                    >
+                                                                        Delete
+                                                                    </button>
+                                                                </div>
+                                                            </td>
+                                                        </tr>
                                                     ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {!loading && currentView === 'students' && activeRole === 'admin' && (
+                                <div className="space-y-6">
+                                    <div className="flex justify-between items-center">
+                                        <h1 className="text-3xl font-bold text-gray-800">All Students</h1>
+                                    </div>
+
+                                    <div className="bg-white rounded-xl shadow p-6">
+                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                                            <input
+                                                type="text"
+                                                placeholder="Search students..."
+                                                value={searchTerm}
+                                                onChange={(e) => setSearchTerm(e.target.value)}
+                                                className="p-3 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                                            />
+                                            <select
+                                                value={filterProgram}
+                                                onChange={(e) => setFilterProgram(e.target.value)}
+                                                className="p-3 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                                            >
+                                                <option value="">All Programs</option>
+                                                {[...new Set(students.map(s => s.program).filter(Boolean))].map(prog => (
+                                                    <option key={prog} value={prog}>{prog}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+
+                                        <div className="overflow-x-auto">
+                                            <table className="w-full">
+                                                <thead className="bg-gray-50">
+                                                    <tr>
+                                                        <th className="p-3 text-left text-sm font-semibold text-gray-700">Student ID</th>
+                                                        <th className="p-3 text-left text-sm font-semibold text-gray-700">Name</th>
+                                                        <th className="p-3 text-left text-sm font-semibold text-gray-700">Email</th>
+                                                        <th className="p-3 text-left text-sm font-semibold text-gray-700">Program</th>
+                                                        <th className="p-3 text-left text-sm font-semibold text-gray-700">Actions</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {students.filter(s => {
+                                                        const matchesSearch = !searchTerm ||
+                                                            s.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                                                            s.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                                                            s.studentId?.includes(searchTerm)
+                                                        const matchesProgram = !filterProgram || s.program === filterProgram
+                                                        return matchesSearch && matchesProgram
+                                                    }).map(student => (
+                                                        <tr key={student.id} className="border-b hover:bg-gray-50">
+                                                            <td className="p-3">{student.studentId || 'N/A'}</td>
+                                                            <td className="p-3 font-medium">{student.name}</td>
+                                                            <td className="p-3">{student.email}</td>
+                                                            <td className="p-3">{student.program || 'N/A'}</td>
+                                                            <td className="p-3">
+                                                                <button
+                                                                    onClick={() => {
+                                                                        setSelectedStudent(student)
+                                                                        setShowStudentModal(true)
+                                                                    }}
+                                                                    className="px-3 py-1 text-sm bg-blue-50 text-blue-600 rounded hover:bg-blue-100"
+                                                                >
+                                                                    Edit
+                                                                </button>
+                                                            </td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {!loading && currentView === 'reports' && (
+                                <div className="space-y-6">
+                                    <h1 className="text-3xl font-bold text-gray-800">Reports & Analytics</h1>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        {activeRole === 'admin' && (
+                                            <>
+                                                <div className="bg-white rounded-xl shadow p-6">
+                                                    <h3 className="text-xl font-bold text-gray-800 mb-4">System Overview</h3>
+                                                    <div className="space-y-3">
+                                                        <div className="flex justify-between">
+                                                            <span className="text-gray-600">Total Students:</span>
+                                                            <span className="font-semibold">{students.length}</span>
+                                                        </div>
+                                                        <div className="flex justify-between">
+                                                            <span className="text-gray-600">Total Courses:</span>
+                                                            <span className="font-semibold">{coursesData.length}</span>
+                                                        </div>
+                                                        <div className="flex justify-between">
+                                                            <span className="text-gray-600">Total Lecturers:</span>
+                                                            <span className="font-semibold">{lecturers.length}</span>
+                                                        </div>
+                                                        <div className="flex justify-between">
+                                                            <span className="text-gray-600">Total Enrollments:</span>
+                                                            <span className="font-semibold">
+                                                                {coursesData.reduce((sum, c) => sum + (c.enrolled || 0), 0)}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div className="bg-white rounded-xl shadow p-6">
+                                                    <h3 className="text-xl font-bold text-gray-800 mb-4">Course Statistics</h3>
+                                                    <div className="space-y-3">
+                                                        <div className="flex justify-between">
+                                                            <span className="text-gray-600">Average Enrollment:</span>
+                                                            <span className="font-semibold">
+                                                                {coursesData.length > 0
+                                                                    ? (coursesData.reduce((sum, c) => sum + (c.enrolled || 0), 0) / coursesData.length).toFixed(1)
+                                                                    : 0}
+                                                            </span>
+                                                        </div>
+                                                        <div className="flex justify-between">
+                                                            <span className="text-gray-600">Full Courses:</span>
+                                                            <span className="font-semibold">
+                                                                {coursesData.filter(c => (c.enrolled || 0) >= (c.capacity || 30)).length}
+                                                            </span>
+                                                        </div>
+                                                        <div className="flex justify-between">
+                                                            <span className="text-gray-600">Available Spots:</span>
+                                                            <span className="font-semibold">
+                                                                {coursesData.reduce((sum, c) => sum + ((c.capacity || 30) - (c.enrolled || 0)), 0)}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </>
+                                        )}
+                                        {activeRole === 'lecturer' && (
+                                            <div className="bg-white rounded-xl shadow p-6">
+                                                <h3 className="text-xl font-bold text-gray-800 mb-4">Teaching Statistics</h3>
+                                                <div className="space-y-3">
+                                                    <div className="flex justify-between">
+                                                        <span className="text-gray-600">My Courses:</span>
+                                                        <span className="font-semibold">{coursesData.length}</span>
+                                                    </div>
+                                                    <div className="flex justify-between">
+                                                        <span className="text-gray-600">Total Students:</span>
+                                                        <span className="font-semibold">
+                                                            {coursesData.reduce((sum, c) => sum + (c.enrolled || 0), 0)}
+                                                        </span>
+                                                    </div>
+                                                    <div className="flex justify-between">
+                                                        <span className="text-gray-600">Course Materials:</span>
+                                                        <span className="font-semibold">{courseMaterials.length}</span>
+                                                    </div>
+                                                    <div className="flex justify-between">
+                                                        <span className="text-gray-600">Grades Entered:</span>
+                                                        <span className="font-semibold">{grades.length}</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
+                                        {activeRole === 'student' && (
+                                            <div className="bg-white rounded-xl shadow p-6">
+                                                <h3 className="text-xl font-bold text-gray-800 mb-4">Academic Progress</h3>
+                                                <div className="space-y-3">
+                                                    <div className="flex justify-between">
+                                                        <span className="text-gray-600">Enrolled Courses:</span>
+                                                        <span className="font-semibold">{enrollments.length}</span>
+                                                    </div>
+                                                    <div className="flex justify-between">
+                                                        <span className="text-gray-600">Total Grades:</span>
+                                                        <span className="font-semibold">{grades.length}</span>
+                                                    </div>
+                                                    <div className="flex justify-between">
+                                                        <span className="text-gray-600">Average Grade:</span>
+                                                        <span className="font-semibold">
+                                                            {grades.length > 0
+                                                                ? (grades.reduce((sum, g) => sum + parseFloat(g.grade || 0), 0) / grades.length).toFixed(1)
+                                                                : 'N/A'}
+                                                        </span>
+                                                    </div>
+                                                    <div className="flex justify-between">
+                                                        <span className="text-gray-600">GPA:</span>
+                                                        <span className="font-semibold">{userProfile?.gpa || 'N/A'}</span>
+                                                    </div>
                                                 </div>
                                             </div>
                                         )}
                                     </div>
-                                )
-                            }) : (
-                                <p className="text-gray-600">No courses assigned yet.</p>
+                                </div>
+                            )}
+
+                            {!loading && currentView === 'settings' && activeRole === 'admin' && (
+                                <div className="space-y-6">
+                                    <h1 className="text-3xl font-bold text-gray-800">System Settings</h1>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div className="bg-white rounded-xl shadow p-6">
+                                            <h3 className="text-xl font-bold text-gray-800 mb-4">Course Settings</h3>
+                                            <div className="space-y-4">
+                                                <div>
+                                                    <label className="block text-sm font-medium text-gray-700 mb-2">Default Course Capacity</label>
+                                                    <input
+                                                        type="number"
+                                                        defaultValue="30"
+                                                        className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className="block text-sm font-medium text-gray-700 mb-2">Default Credits</label>
+                                                    <input
+                                                        type="number"
+                                                        defaultValue="3"
+                                                        className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                                                    />
+                                                </div>
+                                                <button className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                                                    Save Course Settings
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div className="bg-white rounded-xl shadow p-6">
+                                            <h3 className="text-xl font-bold text-gray-800 mb-4">User Management</h3>
+                                            <div className="space-y-4">
+                                                <div className="flex justify-between items-center">
+                                                    <span className="text-gray-700">Total Users:</span>
+                                                    <span className="font-semibold">{students.length + lecturers.length + 1}</span>
+                                                </div>
+                                                <div className="flex justify-between items-center">
+                                                    <span className="text-gray-700">Students:</span>
+                                                    <span className="font-semibold">{students.length}</span>
+                                                </div>
+                                                <div className="flex justify-between items-center">
+                                                    <span className="text-gray-700">Lecturers:</span>
+                                                    <span className="font-semibold">{lecturers.length}</span>
+                                                </div>
+                                                <div className="flex justify-between items-center">
+                                                    <span className="text-gray-700">Admins:</span>
+                                                    <span className="font-semibold">1</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="bg-white rounded-xl shadow p-6">
+                                            <h3 className="text-xl font-bold text-gray-800 mb-4">System Information</h3>
+                                            <div className="space-y-2 text-sm">
+                                                <div className="flex justify-between">
+                                                    <span className="text-gray-600">Version:</span>
+                                                    <span className="text-gray-800">1.0.0</span>
+                                                </div>
+                                                <div className="flex justify-between">
+                                                    <span className="text-gray-600">Database:</span>
+                                                    <span className="text-gray-800">Firebase Firestore</span>
+                                                </div>
+                                                <div className="flex justify-between">
+                                                    <span className="text-gray-600">Last Backup:</span>
+                                                    <span className="text-gray-800">Today</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {!loading && currentView === 'profile' && activeRole === 'student' && (
+                                <div className="space-y-6">
+                                    <h1 className="text-3xl font-bold text-gray-800">My Profile</h1>
+                                    <div className="bg-white rounded-xl shadow p-6">
+                                        <div className="space-y-4">
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 mb-2">Full Name</label>
+                                                <input
+                                                    type="text"
+                                                    value={userProfile?.name || ''}
+                                                    onChange={(e) => {
+                                                        const updated = { ...userProfile, name: e.target.value }
+                                                        setUserProfile(updated)
+                                                    }}
+                                                    className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 mb-2">Student ID</label>
+                                                <input
+                                                    type="text"
+                                                    value={userProfile?.studentId || ''}
+                                                    onChange={(e) => {
+                                                        const updated = { ...userProfile, studentId: e.target.value }
+                                                        setUserProfile(updated)
+                                                    }}
+                                                    className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 mb-2">Program</label>
+                                                <input
+                                                    type="text"
+                                                    value={userProfile?.program || ''}
+                                                    onChange={(e) => {
+                                                        const updated = { ...userProfile, program: e.target.value }
+                                                        setUserProfile(updated)
+                                                    }}
+                                                    className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 mb-2">Year</label>
+                                                <select
+                                                    value={userProfile?.year || ''}
+                                                    onChange={(e) => {
+                                                        const updated = { ...userProfile, year: e.target.value }
+                                                        setUserProfile(updated)
+                                                    }}
+                                                    className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                                                >
+                                                    <option value="">Select Year</option>
+                                                    <option value="1st Year">1st Year</option>
+                                                    <option value="2nd Year">2nd Year</option>
+                                                    <option value="3rd Year">3rd Year</option>
+                                                    <option value="4th Year">4th Year</option>
+                                                </select>
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 mb-2">GPA</label>
+                                                <input
+                                                    type="number"
+                                                    step="0.01"
+                                                    min="0"
+                                                    max="4"
+                                                    value={userProfile?.gpa || ''}
+                                                    onChange={(e) => {
+                                                        const updated = { ...userProfile, gpa: parseFloat(e.target.value) || 0 }
+                                                        setUserProfile(updated)
+                                                    }}
+                                                    className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
+                                                <input
+                                                    type="email"
+                                                    value={userProfile?.email || ''}
+                                                    disabled
+                                                    className="w-full p-3 border rounded-lg bg-gray-50"
+                                                />
+                                            </div>
+                                            <button
+                                                onClick={async () => {
+                                                    try {
+                                                        await updateDoc(doc(db, 'users', userProfile.uid), {
+                                                            name: userProfile.name,
+                                                            studentId: userProfile.studentId,
+                                                            program: userProfile.program,
+                                                            year: userProfile.year,
+                                                            gpa: userProfile.gpa
+                                                        })
+                                                        alert('Profile updated successfully!')
+                                                    } catch (error) {
+                                                        console.error('Failed to update profile', error)
+                                                        alert('Failed to update profile. Please try again.')
+                                                    }
+                                                }}
+                                                className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                                            >
+                                                Save Profile
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {!loading && currentView === 'schedule' && (
+                                <div className="space-y-6">
+                                    <h1 className="text-3xl font-bold text-gray-800">Schedule</h1>
+                                    <div className="bg-white rounded-xl shadow p-6">
+                                        {activeRole === 'student' && coursesData.length > 0 ? (
+                                            <div className="space-y-3">
+                                                {coursesData.filter(c => enrollments.some(e => e.courseId === c.id && e.studentId === userProfile.uid)).map((course, i) => {
+                                                    const colors = ['bg-blue-600', 'bg-orange-500', 'bg-purple-500', 'bg-green-500', 'bg-pink-500']
+                                                    const color = colors[i % colors.length]
+                                                    return (
+                                                        <div key={course.id} className="flex gap-4 items-center bg-gray-50 border rounded-lg p-4 hover:bg-gray-100 transition">
+                                                            <div className={`${color} w-2 h-12 rounded-full`} />
+                                                            <div className="flex-1">
+                                                                <p className="font-semibold text-gray-800">{course.name || 'Unnamed Course'}</p>
+                                                                <p className="text-sm text-gray-600">{course.schedule || 'TBA'}</p>
+                                                                <p className="text-xs text-gray-500">Code: {course.code || 'N/A'}</p>
+                                                            </div>
+                                                        </div>
+                                                    )
+                                                })}
+                                            </div>
+                                        ) : activeRole === 'lecturer' && coursesData.length > 0 ? (
+                                            <div className="space-y-3">
+                                                {coursesData.map((course, i) => {
+                                                    const colors = ['bg-blue-600', 'bg-orange-500', 'bg-purple-500', 'bg-green-500']
+                                                    const color = colors[i % colors.length]
+                                                    return (
+                                                        <div key={course.id} className="flex gap-4 items-center bg-gray-50 border rounded-lg p-4 hover:bg-gray-100 transition">
+                                                            <div className={`${color} w-2 h-12 rounded-full`} />
+                                                            <div className="flex-1">
+                                                                <p className="font-semibold text-gray-800">{course.name || 'Unnamed Course'}</p>
+                                                                <p className="text-sm text-gray-600">{course.schedule || 'TBA'}</p>
+                                                                <p className="text-xs text-gray-500">Code: {course.code || 'N/A'} • Students: {course.enrolled || 0}</p>
+                                                            </div>
+                                                        </div>
+                                                    )
+                                                })}
+                                            </div>
+                                        ) : (
+                                            <div className="text-center text-gray-500 py-4">
+                                                No scheduled courses
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+
+                            {!loading && currentView === 'courses' && activeRole === 'lecturer' && (
+                                <div className="space-y-6">
+                                    <h1 className="text-3xl font-bold text-gray-800">My Courses</h1>
+                                    <div className="grid grid-cols-1 gap-6">
+                                        {coursesData.length > 0 ? coursesData.map(course => {
+                                            const courseMaterialsList = courseMaterials.filter(m => m.courseId === course.id)
+                                            const courseGrades = grades.filter(g => g.courseId === course.id)
+                                            return (
+                                                <div key={course.id} className="bg-white rounded-xl p-6 shadow-lg">
+                                                    <div className="flex justify-between items-start mb-4">
+                                                        <div className="flex items-center gap-4">
+                                                            <div className="bg-blue-600 w-12 h-12 rounded-xl flex items-center justify-center shadow-md">
+                                                                <Book className="text-white w-6 h-6" />
+                                                            </div>
+                                                            <div>
+                                                                <h3 className="font-bold text-lg text-gray-800">{course.name || 'Unnamed Course'}</h3>
+                                                                <p className="text-sm text-gray-600">Code: {course.code || 'N/A'}</p>
+                                                                <p className="text-sm text-gray-500">Schedule: {course.schedule || 'TBA'}</p>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div className="grid grid-cols-3 gap-4 mb-4">
+                                                        <div className="bg-blue-50 p-3 rounded-lg">
+                                                            <p className="text-sm text-gray-600">Enrolled</p>
+                                                            <p className="text-xl font-bold text-blue-600">{course.enrolled || 0}/{course.capacity || 30}</p>
+                                                        </div>
+                                                        <div className="bg-green-50 p-3 rounded-lg">
+                                                            <p className="text-sm text-gray-600">Materials</p>
+                                                            <p className="text-xl font-bold text-green-600">{courseMaterialsList.length}</p>
+                                                        </div>
+                                                        <div className="bg-orange-50 p-3 rounded-lg">
+                                                            <p className="text-sm text-gray-600">Grades</p>
+                                                            <p className="text-xl font-bold text-orange-600">{courseGrades.length}</p>
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex gap-2 flex-wrap">
+                                                        <button
+                                                            onClick={async () => {
+                                                                const enrolledStudents = await getEnrolledStudents(course.id)
+                                                                alert(`Enrolled Students: ${enrolledStudents.length}\n${enrolledStudents.map(s => `- ${s.name} (${s.studentId || s.email})`).join('\n')}`)
+                                                            }}
+                                                            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm"
+                                                        >
+                                                            View Students
+                                                        </button>
+                                                        <button
+                                                            onClick={() => {
+                                                                setSelectedCourseForAction(course)
+                                                                setShowMaterialModal(true)
+                                                            }}
+                                                            className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm"
+                                                        >
+                                                            Add Material
+                                                        </button>
+                                                        <button
+                                                            onClick={async () => {
+                                                                setSelectedCourseForAction(course)
+                                                                const enrolled = await getEnrolledStudents(course.id)
+                                                                setEnrolledStudentsForGrade(enrolled)
+                                                                setShowGradeModal(true)
+                                                            }}
+                                                            className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 text-sm"
+                                                        >
+                                                            Add Grade
+                                                        </button>
+                                                    </div>
+                                                    {courseMaterialsList.length > 0 && (
+                                                        <div className="mt-4 pt-4 border-t">
+                                                            <h4 className="font-semibold text-gray-700 mb-2">Course Materials</h4>
+                                                            <div className="space-y-2">
+                                                                {courseMaterialsList.map(material => (
+                                                                    <div key={material.id} className="flex justify-between items-center bg-gray-50 p-2 rounded">
+                                                                        <div>
+                                                                            <p className="text-sm font-medium">{material.title}</p>
+                                                                            <p className="text-xs text-gray-500">{material.type}</p>
+                                                                        </div>
+                                                                        <button
+                                                                            onClick={() => deleteMaterial(material.id)}
+                                                                            className="px-2 py-1 text-xs bg-red-100 text-red-600 rounded hover:bg-red-200"
+                                                                        >
+                                                                            Delete
+                                                                        </button>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )
+                                        }) : (
+                                            <p className="text-gray-600">No courses assigned yet.</p>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+
+                            {!loading && currentView === 'courses' && activeRole === 'student' && (
+                                <div className="space-y-6">
+                                    <div className="flex justify-between items-center">
+                                        <h1 className="text-3xl font-bold text-gray-800">My Courses</h1>
+                                        <button
+                                            onClick={() => setShowEnrollmentModal(true)}
+                                            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
+                                        >
+                                            <Book className="w-4 h-4" />
+                                            Enroll in Course
+                                        </button>
+                                    </div>
+
+                                    {coursesData.length > 0 ? (
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            {coursesData.map(course => {
+                                                const isEnrolled = enrollments.some(e => e.courseId === course.id && e.studentId === userProfile.uid)
+                                                const courseGrades = grades.filter(g => g.courseId === course.id && g.studentId === userProfile.uid)
+                                                const courseMaterialsList = courseMaterials.filter(m => m.courseId === course.id)
+                                                const avgGrade = courseGrades.length > 0
+                                                    ? (courseGrades.reduce((sum, g) => sum + parseFloat(g.grade || 0), 0) / courseGrades.length).toFixed(1)
+                                                    : 'N/A'
+
+                                                return (
+                                                    <div key={course.id} className="bg-white rounded-xl p-6 shadow card-hover">
+                                                        <div className="flex justify-between items-center mb-4">
+                                                            <div className="bg-blue-600 w-12 h-12 rounded-xl flex items-center justify-center shadow-md">
+                                                                <Book className="text-white w-6 h-6" />
+                                                            </div>
+                                                            {isEnrolled && (
+                                                                <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-semibold">
+                                                                    Enrolled
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                        <h3 className="font-bold text-lg text-gray-800">{course.name || 'Unnamed Course'}</h3>
+                                                        <p className="text-sm text-gray-600">Code: {course.code || 'N/A'}</p>
+                                                        <p className="text-sm text-gray-500">Instructor: {course.instructor || 'TBA'}</p>
+                                                        <div className="mt-4 space-y-2">
+                                                            <div className="flex justify-between text-sm">
+                                                                <span className="text-gray-600">Schedule:</span>
+                                                                <span className="text-gray-800">{course.schedule || 'TBA'}</span>
+                                                            </div>
+                                                            <div className="flex justify-between text-sm">
+                                                                <span className="text-gray-600">Credits:</span>
+                                                                <span className="text-gray-800">{course.credits || 3}</span>
+                                                            </div>
+                                                            {isEnrolled && (
+                                                                <div className="flex justify-between text-sm">
+                                                                    <span className="text-gray-600">Average Grade:</span>
+                                                                    <span className="text-gray-800 font-semibold">{avgGrade}</span>
+                                                                </div>
+                                                            )}
+                                                            <div className="flex justify-between text-sm">
+                                                                <span className="text-gray-600">Enrolled:</span>
+                                                                <span className="text-gray-800">{course.enrolled || 0}/{course.capacity || 30}</span>
+                                                            </div>
+                                                        </div>
+                                                        {isEnrolled && courseMaterialsList.length > 0 && (
+                                                            <div className="mt-4 pt-4 border-t">
+                                                                <h4 className="font-semibold text-gray-700 mb-2">Course Materials</h4>
+                                                                <div className="space-y-2">
+                                                                    {courseMaterialsList.map(material => (
+                                                                        <div key={material.id} className="flex justify-between items-center bg-gray-50 p-2 rounded">
+                                                                            <div>
+                                                                                <p className="text-sm font-medium">{material.title}</p>
+                                                                                <p className="text-xs text-gray-500 capitalize">{material.type}</p>
+                                                                            </div>
+                                                                            <a
+                                                                                href={material.url}
+                                                                                target="_blank"
+                                                                                rel="noreferrer"
+                                                                                className="px-3 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200"
+                                                                            >
+                                                                                Open
+                                                                            </a>
+                                                                        </div>
+                                                                    ))}
+                                                                </div>
+                                                            </div>
+                                                        )}
+                                                        {!isEnrolled && (
+                                                            <button
+                                                                onClick={() => enrollInCourse(course.id)}
+                                                                className="mt-4 w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                                                            >
+                                                                Enroll Now
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                )
+                                            })}
+                                        </div>
+                                    ) : (
+                                        <div className="bg-white rounded-xl shadow p-6 text-center">
+                                            <p className="text-gray-600">No courses available. Check back later or contact your administrator.</p>
+                                        </div>
+                                    )}
+                                </div>
                             )}
                         </div>
                     </div>
-                )}
-
-                {!loading && currentView === 'courses' && activeRole === 'student' && (
-                    <div className="space-y-6">
-                        <div className="flex justify-between items-center">
-                            <h1 className="text-3xl font-bold text-gray-800">My Courses</h1>
-                            <button
-                                onClick={() => setShowEnrollmentModal(true)}
-                                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
-                            >
-                                <Book className="w-4 h-4" />
-                                Enroll in Course
-                            </button>
-                        </div>
-
-                        {coursesData.length > 0 ? (
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                {coursesData.map(course => {
-                                    const isEnrolled = enrollments.some(e => e.courseId === course.id && e.studentId === userProfile.uid)
-                                    const courseGrades = grades.filter(g => g.courseId === course.id && g.studentId === userProfile.uid)
-                                    const courseMaterialsList = courseMaterials.filter(m => m.courseId === course.id)
-                                    const avgGrade = courseGrades.length > 0
-                                        ? (courseGrades.reduce((sum, g) => sum + parseFloat(g.grade || 0), 0) / courseGrades.length).toFixed(1)
-                                        : 'N/A'
-
-                                    return (
-                                        <div key={course.id} className="bg-white rounded-xl p-6 shadow card-hover">
-                                            <div className="flex justify-between items-center mb-4">
-                                                <div className="bg-blue-600 w-12 h-12 rounded-xl flex items-center justify-center shadow-md">
-                                                    <Book className="text-white w-6 h-6" />
-                                                </div>
-                                                {isEnrolled && (
-                                                    <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-semibold">
-                                                        Enrolled
-                                                    </span>
-                                                )}
-                                            </div>
-                                            <h3 className="font-bold text-lg text-gray-800">{course.name || 'Unnamed Course'}</h3>
-                                            <p className="text-sm text-gray-600">Code: {course.code || 'N/A'}</p>
-                                            <p className="text-sm text-gray-500">Instructor: {course.instructor || 'TBA'}</p>
-                                            <div className="mt-4 space-y-2">
-                                                <div className="flex justify-between text-sm">
-                                                    <span className="text-gray-600">Schedule:</span>
-                                                    <span className="text-gray-800">{course.schedule || 'TBA'}</span>
-                                                </div>
-                                                <div className="flex justify-between text-sm">
-                                                    <span className="text-gray-600">Credits:</span>
-                                                    <span className="text-gray-800">{course.credits || 3}</span>
-                                                </div>
-                                                {isEnrolled && (
-                                                    <div className="flex justify-between text-sm">
-                                                        <span className="text-gray-600">Average Grade:</span>
-                                                        <span className="text-gray-800 font-semibold">{avgGrade}</span>
-                                                    </div>
-                                                )}
-                                                <div className="flex justify-between text-sm">
-                                                    <span className="text-gray-600">Enrolled:</span>
-                                                    <span className="text-gray-800">{course.enrolled || 0}/{course.capacity || 30}</span>
-                                                </div>
-                                            </div>
-                                            {isEnrolled && courseMaterialsList.length > 0 && (
-                                                <div className="mt-4 pt-4 border-t">
-                                                    <h4 className="font-semibold text-gray-700 mb-2">Course Materials</h4>
-                                                    <div className="space-y-2">
-                                                        {courseMaterialsList.map(material => (
-                                                            <div key={material.id} className="flex justify-between items-center bg-gray-50 p-2 rounded">
-                                                                <div>
-                                                                    <p className="text-sm font-medium">{material.title}</p>
-                                                                    <p className="text-xs text-gray-500 capitalize">{material.type}</p>
-                                                                </div>
-                                                                <a
-                                                                    href={material.url}
-                                                                    target="_blank"
-                                                                    rel="noreferrer"
-                                                                    className="px-3 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200"
-                                                                >
-                                                                    Open
-                                                                </a>
-                                                            </div>
-                                                        ))}
-                                                    </div>
-                                                </div>
-                                            )}
-                                            {!isEnrolled && (
-                                                <button
-                                                    onClick={() => enrollInCourse(course.id)}
-                                                    className="mt-4 w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-                                                >
-                                                    Enroll Now
-                                                </button>
-                                            )}
-                                        </div>
-                                    )
-                                })}
-                            </div>
-                        ) : (
-                            <div className="bg-white rounded-xl shadow p-6 text-center">
-                                <p className="text-gray-600">No courses available. Check back later or contact your administrator.</p>
-                            </div>
-                        )}
-                    </div>
-                )}
+                </div>
+              
             </main>
 
             {/* Course Modal */}
